@@ -50,13 +50,12 @@ module GHC.Classes(
     (&&), (||), not,
 
     -- * Integer arithmetic
-    divInt#, divInt8#, divInt16#, divInt32#,
-    modInt#, modInt8#, modInt16#, modInt32#
+    divInt#, divInt8#, divInt16#, divInt32#, divInt64#,
+    modInt#, modInt8#, modInt16#, modInt32#, modInt64#
  ) where
 
 -- GHC.Magic is used in some derived instances
 import GHC.Magic ()
-import GHC.IntWord64
 import GHC.Prim
 import GHC.Tuple
 import GHC.CString (unpackCString#)
@@ -275,7 +274,6 @@ eqInt, neInt :: Int -> Int -> Bool
 (I# x) `eqInt` (I# y) = isTrue# (x ==# y)
 (I# x) `neInt` (I# y) = isTrue# (x /=# y)
 
-#if WORD_SIZE_IN_BITS < 64
 instance Eq TyCon where
   (==) (TyCon hi1 lo1 _ _ _ _) (TyCon hi2 lo2 _ _ _ _)
        = isTrue# (hi1 `eqWord64#` hi2) && isTrue# (lo1 `eqWord64#` lo2)
@@ -286,18 +284,6 @@ instance Ord TyCon where
     | isTrue# (lo1 `gtWord64#` lo2) = GT
     | isTrue# (lo1 `ltWord64#` lo2) = LT
     | True                = EQ
-#else
-instance Eq TyCon where
-  (==) (TyCon hi1 lo1 _ _ _ _) (TyCon hi2 lo2 _ _ _ _)
-       = isTrue# (hi1 `eqWord#` hi2) && isTrue# (lo1 `eqWord#` lo2)
-instance Ord TyCon where
-  compare (TyCon hi1 lo1 _ _ _ _) (TyCon hi2 lo2 _ _ _ _)
-    | isTrue# (hi1 `gtWord#` hi2) = GT
-    | isTrue# (hi1 `ltWord#` hi2) = LT
-    | isTrue# (lo1 `gtWord#` lo2) = GT
-    | isTrue# (lo1 `ltWord#` lo2) = LT
-    | True              = EQ
-#endif
 
 
 -- | The 'Ord' class is used for totally ordered datatypes.
@@ -586,6 +572,18 @@ x# `divInt32#` y#
         y0x = isTrue# (x# `gtInt32#` zero#) && isTrue# (y# `ltInt32#` zero#)
         x0y = isTrue# (x# `ltInt32#` zero#) && isTrue# (y# `gtInt32#` zero#)
 
+{-# NOINLINE [0] divInt64# #-}
+divInt64# :: Int64# -> Int64# -> Int64#
+x# `divInt64#` y#
+    | y0x = ((x# `subInt64#` one#) `quotInt64#` y#) `subInt64#` one#
+    | x0y = ((x# `plusInt64#` one#) `quotInt64#` y#) `subInt64#` one#
+    | True = x# `quotInt64#` y#
+  where zero# = intToInt64# 0#
+        one# = intToInt64# 1#
+        y0x = isTrue# (x# `gtInt64#` zero#) && isTrue# (y# `ltInt64#` zero#)
+        x0y = isTrue# (x# `ltInt64#` zero#) && isTrue# (y# `gtInt64#` zero#)
+
+
 {-# NOINLINE [0] modInt# #-}
 modInt# :: Int# -> Int# -> Int#
 x# `modInt#` y#
@@ -628,6 +626,17 @@ x# `modInt32#` y#
     where
     !r# = x# `remInt32#` y#
     zero# = intToInt32# 0#
+
+{-# NOINLINE [0] modInt64# #-}
+modInt64# :: Int64# -> Int64# -> Int64#
+x# `modInt64#` y#
+    = if isTrue# (x# `gtInt64#` zero#) && isTrue# (y# `ltInt64#` zero#) ||
+         isTrue# (x# `ltInt64#` zero#) && isTrue# (y# `gtInt64#` zero#)
+      then if isTrue# (r# `neInt64#` zero#) then r# `plusInt64#` y# else zero#
+      else r#
+    where
+    !r# = x# `remInt64#` y#
+    zero# = intToInt64# 0#
 
 
 
