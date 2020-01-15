@@ -1611,8 +1611,13 @@ tc_eq_type keep_syns vis_only orig_ty1 orig_ty2
       && (vis_only || go env (varType tv1) (varType tv2))
       && go (rnBndr2 env tv1 tv2) ty1 ty2
 
+      -- See Note [Equality on FunTys] in TyCoRep
     go env (FunTy _ w1 arg1 res1) (FunTy _ w2 arg2 res2)
-      = go env w1 w2 && go env arg1 arg2 && go env res1 res2
+      = kinds_eq && go env arg1 arg2 && go env res1 res2 && go env w1 w2
+      where
+        kinds_eq | vis_only  = True
+                 | otherwise = go env (typeKind arg1) (typeKind arg2) &&
+                               go env (typeKind res1) (typeKind res2)
 
     go env (AppTy s1 t1)        (AppTy s2 t2)
       = go_app_tys env s1 [t1] s2 [t2]

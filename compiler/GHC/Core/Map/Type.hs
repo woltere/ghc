@@ -139,13 +139,14 @@ type TypeMapG = GenMap TypeMapX
 -- 'GenMap' optimization. See Note [Computing equality on types] in Type.
 data TypeMapX a
   = TM { tm_var       :: VarMap a
-       , tm_app       :: TypeMap (TypeMap a)  -- NB: TypeMap looks up kinds; that's what we want
+       , tm_app       :: TypeMap (TypeMap a)  -- Note [Equality on AppTys] in TyCoRep
        , tm_tyconapp  :: DNameEnv (ListMap TypeMapG a)
 
          -- only InvisArg arrows here
        , tm_funty  :: TypeMapG (TypeMapG (TypeMapG a))
                        -- keyed on the argument, result rep, and result
                        -- constraints are never linear-restricted and are always lifted
+                       -- See also Note [Equality on FunTys] in GHC.Core.TyCo.Rep
 
        , tm_forall    :: TypeMapG (BndrMap a) -- See Note [Binders] in GHC.Core.Map.Expr
        , tm_tylit     :: TyLitMap a

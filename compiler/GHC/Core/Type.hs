@@ -2569,8 +2569,10 @@ nonDetCmpTypeX env orig_t1 orig_t2 =
         -- See Note [Equality on AppTys] in GHC.Core.TyCo.Rep
     go env (AppTy s1 t1) (AppTy s2 t2)
       = liftOrdering (nonDetCmpTypeX env s1 s2 `thenCmp` nonDetCmpTypeX env t1 t2)
+        -- See Note [Equality on FunTys] in GHC.Core.TyCo.Rep
     go env (FunTy _ w1 s1 t1) (FunTy _ w2 s2 t2)
-      = go env s1 s2 `thenCmpTy` go env t1 t2 `thenCmpTy` go env w1 w2
+      = liftOrdering (nonDetCmpTypeX env s1 s2 `thenCmp` nonDetCmpTypeX env t1 t2)
+          `thenCmpTy` go env w1 w2
         -- Comparing multiplicities last because the test is usually true
     go env (TyConApp tc1 tys1) (TyConApp tc2 tys2)
       = liftOrdering (tc1 `nonDetCmpTc` tc2) `thenCmpTy` gos env tys1 tys2

@@ -572,6 +572,13 @@ When checking when two AppTys are equal, we must also check that the
 components' kinds are respectively equal. Why? See the section on
 AppTy in Note [Respecting definitional equality].
 
+Note [Equality on FunTys]
+~~~~~~~~~~~~~~~~~~~~~~~~~
+A FunTy arg res is just an abbreviation for a TyConApp funTyCon arg_rep
+res_rep arg res. Thus, when comparing two FunTys for equality, we must check
+the kinds of the arg and the res, in order to faithfully reproduce what
+would happen on a TyConApp.
+
 Note [Unused coercion variable in ForAllTy]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Suppose we have
