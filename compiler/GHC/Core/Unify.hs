@@ -1068,6 +1068,7 @@ unify_ty :: UMEnv
          -> UM ()
 -- See Note [Specification of unification]
 -- Respects newtypes, PredTypes
+-- See Note [Computing equality on types] in Type
 
 unify_ty env ty1 ty2 kco
   -- See Note [Comparing nullary type synonyms] in GHC.Core.Type.

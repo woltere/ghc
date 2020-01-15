@@ -1311,6 +1311,123 @@
    (SrcSpanAnn (EpAnnNotUsed) { <no location info> })
    (VarBind
     (NoExtField)
+    {Var: $krep}
+    ({ <no location info> }
+     (HsApp
+      (NoExtField)
+      ({ <no location info> }
+       (HsApp
+        (NoExtField)
+        ({ <no location info> }
+         (HsConLikeOut
+          (NoExtField)
+          ({abstract:ConLike})))
+        ({ <no location info> }
+         (HsVar
+          (NoExtField)
+          ({ <no location info> }
+           {Var: $krep})))))
+      ({ <no location info> }
+       (HsVar
+        (NoExtField)
+        ({ <no location info> }
+         {Var: GHC.Types.krep$*})))))))
+ ,({ <no location info> }
+   (VarBind
+    (NoExtField)
+    {Var: $krep}
+    ({ <no location info> }
+     (HsApp
+      (NoExtField)
+      ({ <no location info> }
+       (HsApp
+        (NoExtField)
+        ({ <no location info> }
+         (HsConLikeOut
+          (NoExtField)
+          ({abstract:ConLike})))
+        ({ <no location info> }
+         (HsVar
+          (NoExtField)
+          ({ <no location info> }
+           {Var: $krep})))))
+      ({ <no location info> }
+       (HsVar
+        (NoExtField)
+        ({ <no location info> }
+         {Var: $krep})))))))
+ ,({ <no location info> }
+   (VarBind
+    (NoExtField)
+    {Var: $krep}
+    ({ <no location info> }
+     (HsApp
+      (NoExtField)
+      ({ <no location info> }
+       (HsApp
+        (NoExtField)
+        ({ <no location info> }
+         (HsConLikeOut
+          (NoExtField)
+          ({abstract:ConLike})))
+        ({ <no location info> }
+         (HsVar
+          (NoExtField)
+          ({ <no location info> }
+           {Var: $krep})))))
+      ({ <no location info> }
+       (HsVar
+        (NoExtField)
+        ({ <no location info> }
+         {Var: $krep})))))))
+ ,({ <no location info> }
+   (VarBind
+    (NoExtField)
+    {Var: $krep}
+    ({ <no location info> }
+     (HsApp
+      (NoExtField)
+      ({ <no location info> }
+       (HsApp
+        (NoExtField)
+        ({ <no location info> }
+         (HsConLikeOut
+          (NoExtField)
+          ({abstract:ConLike})))
+        ({ <no location info> }
+         (HsVar
+          (NoExtField)
+          ({ <no location info> }
+           {Var: $krep})))))
+      ({ <no location info> }
+       (HsVar
+        (NoExtField)
+        ({ <no location info> }
+         {Var: $krep})))))))
+ ,({ <no location info> }
+   (VarBind
+    (NoExtField)
+    {Var: $krep}
+    ({ <no location info> }
+     (HsApp
+      (NoExtField)
+      ({ <no location info> }
+       (HsConLikeOut
+        (NoExtField)
+        ({abstract:ConLike})))
+      ({ <no location info> }
+       (HsLit
+        (NoExtField)
+        (HsInt
+         (NoExtField)
+         (IL
+          (SourceText
+           "1")
+          (False)
+          (1)))))))))
+ ,({ <no location info> }
+   (VarBind
+    (NoExtField)
     {Var: DumpTypecheckedAst.$trModule}
     (L
      (SrcSpanAnn (EpAnnNotUsed) { <no location info> })
