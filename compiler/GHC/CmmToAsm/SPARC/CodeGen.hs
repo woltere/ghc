@@ -693,7 +693,7 @@ outOfLineMachOp_table mop
         MO_64_U_Le   -> fsLit "hs_leWord64"
         MO_64_U_Lt   -> fsLit "hs_ltWord64"
 
-        MO_UF_Conv w -> fsLit $ word2FloatLabel w
+        MO_UF_Conv wFrom wTo -> fsLit $ word2FloatLabel wFrom wTo
 
         MO_Memcpy _  -> fsLit "memcpy"
         MO_Memset _  -> fsLit "memset"
