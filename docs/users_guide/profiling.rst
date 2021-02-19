@@ -459,7 +459,7 @@ compiled program.
     :type: dynamic
 
     Deprecated alias for :ghc-flag:`-fprof-auto-exported`
-    
+
 .. ghc-flag:: -caf-all
     :shortdesc: *(deprecated)* Alias for :ghc-flag:`-fprof-cafs`
     :type: dynamic
@@ -745,6 +745,10 @@ from GHC's ``nofib`` benchmark suite,
 You might also want to take a look at
 `hp2any <http://www.haskell.org/haskellwiki/Hp2any>`__, a more advanced
 suite of tools (not distributed with GHC) for displaying heap profiles.
+
+Note that there might be a big difference between the OS reported memory usage
+of your program and the amount of live data as reported by heap profiling.
+The reasons for the difference are explained in :ref:`hints-os-memory`.
 
 .. _rts-options-heap-prof:
 
