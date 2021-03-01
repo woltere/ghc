@@ -884,9 +884,10 @@ build-x86_64-linux-alpine-hadrian:
     # Can't use ld.gold due to #13958.
     CONFIGURE_ARGS: "--disable-ld-override"
     HADRIAN_ARGS: "--docs=no-sphinx"
-    # encoding004 due to lack of locale support
-    # T10458 due to fact that dynamic linker tries to reload libAS
-    BROKEN_TESTS: "encoding004 T10458"
+    # encoding004: due to lack of locale support
+    # T10458: due to fact that dynamic linker tries to reload libAS
+    # prog001, prog002, prog003, ghci.prog010, ghci058: due to #19467
+    BROKEN_TESTS: "encoding004 T10458 prog001 prog003 ghci.prog010 ghci058"
   cache:
     key: linux-x86_64-alpine
   artifacts:
