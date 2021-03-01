@@ -873,7 +873,7 @@ release-x86_64-linux-deb8:
 
 build-x86_64-linux-alpine-hadrian:
   extends: .validate-linux-hadrian
-  stage: full-build
+  stage: build
   image: "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-alpine3_12:$DOCKER_REV"
   # There are currently a few failing tests
   allow_failure: true
