@@ -759,7 +759,7 @@ dmdAnalRhsSig
 -- to the Id, and augment the environment with the signature as well.
 -- See Note [NOINLINE and strictness]
 dmdAnalRhsSig top_lvl rec_bndrs env let_dmd lazy_fv id rhs
-  = -- applyWhen (not $ isEmptyVarSet rec_bndrs) (pprTrace "dmdAnalRhsSig" (ppr id <+> ppr sig <+> ppr lazy_fv')) $
+  = -- applyWhen (not $ isEmptyVarSet rec_bndrs) (pprTrace "dmdAnalRhsSig" (ppr id <+> ppr sig)) $
     (env', lazy_fv', id', rhs')
   where
     rhs_arity = idArity id
@@ -1087,10 +1087,13 @@ dmdFix top_lvl env let_dmd orig_pairs
                            loop' n lazy_fv pairs
 
     loop' n lazy_fv pairs
+      | still_stable   = (prev_anal_env, lazy_fv, pairs)
       | found_fixpoint = (final_anal_env, lazy_fv', final_pairs)
       | n == 10        = abort
       | otherwise      = loop (n+1) lazy_fv' pairs'
       where
+        still_stable       = not (ae_virgin env) && all (disjointUFM (getUniqSet (ae_unstable env))) (lazy_fv:map (dmdSigDmdEnv . idDmdSig . fst) pairs)
+        prev_anal_env      = extendAnalEnvs top_lvl env (map fst pairs)
         -- See Note [Lazy free variables are stable after signature is stable]
         found_fixpoint     = map (idDmdSig . fst) pairs' == map (idDmdSig . fst) pairs
         first_round        = n == 1
@@ -1104,7 +1107,7 @@ dmdFix top_lvl env let_dmd orig_pairs
       where
         -- In all but the first iteration, delete the virgin flag
         start_env | first_round = env
-                  | otherwise   = nonVirgin env
+                  | otherwise   = non_virgin_env
 
         start = (extendAnalEnvs top_lvl start_env (map fst pairs), lazy_fv)
 
@@ -1119,6 +1122,11 @@ dmdFix top_lvl env let_dmd orig_pairs
           where
             (env', lazy_fv', id', rhs')
               = dmdAnalRhsSig top_lvl rec_bndrs env let_dmd lazy_fv id rhs
+
+    non_virgin_env :: AnalEnv
+    non_virgin_env
+      = env { ae_virgin = False
+            , ae_unstable = unionVarSet (ae_unstable env) rec_bndrs }
 
     rec_bndrs :: IdSet
     rec_bndrs = mkVarSet (map fst orig_pairs)
@@ -1490,10 +1498,13 @@ notArgOfDfun = False
 
 data AnalEnv = AE
    { ae_strict_dicts :: !Bool -- ^ Enable strict dict
+   , ae_fam_envs     :: !FamInstEnvs
    , ae_sigs         :: !SigEnv
    , ae_virgin       :: !Bool -- ^ True on first iteration only
                               -- See Note [Initialising strictness]
-   , ae_fam_envs     :: !FamInstEnvs
+   , ae_unstable     :: !IdSet -- ^ Outer recursive binders (the RHSs of which
+                               -- we currently analyse) the signatures of which
+                               -- changed in the last iteration.
    }
 
         -- We use the se_env to tell us whether to
@@ -1508,16 +1519,17 @@ type SigEnv = VarEnv (DmdSig, TopLevelFlag)
 instance Outputable AnalEnv where
   ppr env = text "AE" <+> braces (vcat
          [ text "ae_virgin =" <+> ppr (ae_virgin env)
-         , text "ae_strict_dicts =" <+> ppr (ae_strict_dicts env)
+         , text "ae_unstable =" <+> ppr (ae_unstable env)
          , text "ae_sigs =" <+> ppr (ae_sigs env)
          ])
 
 emptyAnalEnv :: DmdAnalOpts -> FamInstEnvs -> AnalEnv
 emptyAnalEnv opts fam_envs
     = AE { ae_strict_dicts = dmd_strict_dicts opts
+         , ae_fam_envs     = fam_envs
          , ae_sigs         = emptySigEnv
          , ae_virgin       = True
-         , ae_fam_envs     = fam_envs
+         , ae_unstable     = emptyVarSet
          }
 
 emptySigEnv :: SigEnv
@@ -1541,9 +1553,6 @@ extendSigEnv top_lvl sigs var sig = extendVarEnv sigs var (sig, top_lvl)
 
 lookupSigEnv :: AnalEnv -> Id -> Maybe (DmdSig, TopLevelFlag)
 lookupSigEnv env id = lookupVarEnv (ae_sigs env) id
-
-nonVirgin :: AnalEnv -> AnalEnv
-nonVirgin env = env { ae_virgin = False }
 
 findBndrsDmds :: AnalEnv -> DmdType -> [Var] -> (DmdType, [Demand])
 -- Return the demands on the Ids in the [Var]

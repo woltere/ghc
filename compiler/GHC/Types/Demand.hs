@@ -1444,7 +1444,7 @@ data DmdSig
   -- ^ Not exported. Instead, a unidirectional pattern synonym 'DmdSig' is
   -- exported for use in pattern matches, so the only way to construct
   -- signtures is through 'mkDmdSigForArity' and 'mkClosedDmdSig'.
-  | DmdSigWithLazyFVs !DmdType !DmdEnv
+  | DmdSigWithLazyFVs !DmdType DmdEnv
   -- ^ Not exported.
   -- Carries an additional 'DmdEnv' only used as a cache in fixed-point
   -- iteration. No further semantic info, just pretend it is empty.
