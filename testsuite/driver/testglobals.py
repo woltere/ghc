@@ -32,8 +32,8 @@ class TestConfig:
         self.only = set()
 
         # Don't fail on out-of-tolerance stat failures
-        self.ignore_perf_increases = False
-        self.ignore_perf_decreases = False
+        self.ignore_perf_increases = True
+        self.ignore_perf_decreases = True
 
         # Accept new output which differs from the sample?
         self.accept = False
