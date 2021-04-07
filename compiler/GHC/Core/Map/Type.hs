@@ -48,9 +48,6 @@ import GHC.Types.Var.Env
 import GHC.Types.Unique.FM
 import GHC.Utils.Outputable
 
-import GHC.Data.Maybe
-import GHC.Utils.Panic
-
 import qualified Data.Map    as Map
 import qualified Data.IntMap as IntMap
 
@@ -210,12 +207,12 @@ emptyT = TM { tm_var      = emptyTM
 
 mapT :: (a->b) -> TypeMapX a -> TypeMapX b
 mapT f (TM { tm_var  = tvar, tm_app = tapp, tm_tyconapp = ttyconapp
-           , tm_fun = tfun, tm_forall = tforall, tm_tylit = tlit
+           , tm_funty = tfunty, tm_forall = tforall, tm_tylit = tlit
            , tm_coerce = tcoerce })
   = TM { tm_var    = mapTM f tvar
        , tm_app    = mapTM (mapTM f) tapp
        , tm_tyconapp  = mapTM (mapTM f) ttyconapp
-       , tm_fun    = mapTM (mapTM (mapTM f)) tfun
+       , tm_funty  = mapTM (mapTM (mapTM f)) tfunty
        , tm_forall = mapTM (mapTM f) tforall
        , tm_tylit  = mapTM f tlit
        , tm_coerce = fmap f tcoerce }
@@ -231,7 +228,7 @@ lkT (D env ty) m = go ty m
     go (TyConApp tc args)          = tm_tyconapp >.> lkDNamed tc
                                                  >=> lkList (lkG . D env) args
     go (FunTy InvisArg _ arg res)  = tm_funty >.> lkG (D env arg)
-                                              >=> lkG (D env (getRuntimeRep res)
+                                              >=> lkG (D env (getRuntimeRep res))
                                               >=> lkG (D env res)
     go (FunTy VisArg w arg res)    = tm_tyconapp >.> lkDNamed funTyCon
                                                  >=> lkList (lkG . D env)
@@ -259,8 +256,8 @@ xtT (D env (FunTy InvisArg _ t1 t2)) f m = m { tm_funty = tm_funty m |> xtG (D e
                                                                     |>> xtG (D env t2_rep)
                                                                     |>> xtG (D env t2) f }
   where t2_rep = getRuntimeRep t2
-xtT (D env (FunTy VisArg w arg res))  f m = m { tm_fun  = tm_tyconapp m |> xtDNamed funTyCon
-                                                           |>> xtList (xtG . D env)
+xtT (D env (FunTy VisArg w arg res))  f m
+  = m { tm_tyconapp = tm_tyconapp m |> xtDNamed funTyCon |>> xtList (xtG . D env)
                                                                 [ w
                                                                 , getRuntimeRep arg
                                                                 , getRuntimeRep res
@@ -283,12 +280,12 @@ fdT k m = foldTM k (tm_var m)
         . foldMaybe k (tm_coerce m)
 
 filterT :: (a -> Bool) -> TypeMapX a -> TypeMapX a
-filterT f (TM { tm_var  = tvar, tm_app = tapp, tm_tycon = ttycon
+filterT f (TM { tm_var  = tvar, tm_app = tapp, tm_tyconapp = ttyconapp
               , tm_funty = tfunty, tm_forall = tforall, tm_tylit = tlit
               , tm_coerce = tcoerce })
   = TM { tm_var    = filterTM f tvar
        , tm_app    = mapTM (filterTM f) tapp
-       , tm_tycon  = filterTM f ttycon
+       , tm_tyconapp = mapDNameEnv (filterTM f) ttyconapp
        , tm_funty  = mapTM (mapTM (filterTM f)) tfunty
        , tm_forall = mapTM (filterTM f) tforall
        , tm_tylit  = filterTM f tlit
