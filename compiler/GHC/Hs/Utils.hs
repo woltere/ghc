@@ -249,7 +249,8 @@ mkHsAppType e t = addCLocAA t_body e (HsAppType noExtField e paren_wct)
 mkHsAppTypes :: LHsExpr GhcRn -> [LHsWcType GhcRn] -> LHsExpr GhcRn
 mkHsAppTypes = foldl' mkHsAppType
 
-mkHsLam :: (IsPass p, XMG (GhcPass p) (LHsExpr (GhcPass p)) ~ NoExtField)
+mkHsLam :: (IsPass p, XMG (GhcPass p) (LHsExpr (GhcPass p)) ~ NoExtField,
+            Anno (IdGhcP p) ~ SrcSpanAnnN)
         => [LPat (GhcPass p)]
         -> LHsExpr (GhcPass p)
         -> LHsExpr (GhcPass p)
@@ -1158,7 +1159,6 @@ collectStmtBinders flag = \case
 
 
 ----------------- Patterns --------------------------
-
 collectPatBinders
     :: CollectPass p
     => CollectFlag p
@@ -1172,7 +1172,6 @@ collectPatsBinders
     -> [LPat p]
     -> [IdP p]
 collectPatsBinders flag pats = foldr (collect_lpat flag) [] pats
-
 
 -------------
 

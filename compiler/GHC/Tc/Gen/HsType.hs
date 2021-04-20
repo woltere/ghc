@@ -71,7 +71,9 @@ module GHC.Tc.Gen.HsType (
         HoleMode(..),
 
         -- Error messages
-        funAppCtxt, addTyConFlavCtxt
+        funAppCtxt, addTyConFlavCtxt,
+
+        tcTyVar, typeLevelMode
    ) where
 
 #include "HsVersions.h"

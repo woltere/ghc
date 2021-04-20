@@ -257,7 +257,6 @@ tc_cmd env
        (cmd_stk, res_ty)
   = addErrCtxt (pprMatchInCtxt match)        $
     do  { (co, arg_tys, cmd_stk') <- matchExpectedCmdArgs n_pats cmd_stk
-
                 -- Check the patterns, and the GRHSs inside
         ; (pats', grhss') <- setSrcSpanA mtch_loc                                 $
                              tcPats LambdaExpr pats (map (unrestricted . mkCheckExpType) arg_tys) $

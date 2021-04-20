@@ -950,7 +950,8 @@ cvtl e = wrapLA (cvt e)
                                -- oddities that can result from zero-argument
                                -- lambda expressions. See #13856.
     cvt (LamE ps e)    = do { ps' <- cvtPats ps; e' <- cvtl e
-                            ; let pats = map (parenthesizePat appPrec) ps'
+                            ; let pats' = ps'
+                            ; let pats = map (parenthesizePat appPrec) pats'
                             ; th_origin <- getOrigin
                             ; return $ HsLam noExtField (mkMatchGroup th_origin
                                              (noLocA [mkSimpleMatch LambdaExpr

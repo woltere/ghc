@@ -628,7 +628,7 @@ conPatNeedsParens p = go
     go (InfixCon {})       = p >= opPrec -- type args should be empty in this case
     go (RecCon {})         = False
 
--- | @'parenthesizePat' p pat@ checks if @'patNeedsParens' p pat@ is true, and
+-- | @'parenthesizeLPat' p pat@ checks if @'patNeedsParens' p pat@ is true, and
 -- if so, surrounds @pat@ with a 'ParPat'. Otherwise, it simply returns @pat@.
 parenthesizePat :: IsPass p
                 => PprPrec

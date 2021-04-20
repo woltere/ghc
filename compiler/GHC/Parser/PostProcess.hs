@@ -58,6 +58,7 @@ module GHC.Parser.PostProcess (
         checkContext,         -- HsType -> P HsContext
         checkPattern,         -- HsExp -> P HsPat
         checkPattern_hints,
+        checkTyVars,
         checkMonadComp,       -- P (HsStmtContext GhcPs)
         checkValDef,          -- (SrcLoc, HsExp, HsRhs, [HsDecl]) -> P HsDecl
         checkValSigLhs,
@@ -1091,10 +1092,7 @@ checkPat loc (L l e@(PatBuilderVar (L ln c))) tyargs args
       { pat_con_ext = noAnn -- AZ: where should this come from?
       , pat_con = L ln c
       , pat_args = PrefixCon tyargs args
-      }
-  | not (null tyargs) =
-      add_hint TypeApplicationsInPatternsOnlyDataCons $
-      patFail (locA l) (ppr e <+> hsep [text "@" <> ppr t | t <- tyargs])
+    }
   | not (null args) && patIsRec c =
       add_hint SuggestRecursiveDo $
       patFail (locA l) (ppr e)
@@ -1106,6 +1104,9 @@ checkPat loc (L _ (PatBuilderApp f e)) [] args = do
 checkPat loc (L l e) [] [] = do
   p <- checkAPat loc e
   return (L l p)
+checkPat loc e tyargs args
+  | not (null tyargs), (_:tyargs') <- tyargs =
+     checkPat loc e tyargs' args
 checkPat loc e _ _ = patFail (locA loc) (ppr e)
 
 checkAPat :: SrcSpanAnnA -> PatBuilder GhcPs -> PV (Pat GhcPs)

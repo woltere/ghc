@@ -31,6 +31,7 @@ module GHC.Hs.Expr
 #include "HsVersions.h"
 
 import Language.Haskell.Syntax.Expr
+import Language.Haskell.Syntax.Pat
 
 -- friends:
 import GHC.Prelude
