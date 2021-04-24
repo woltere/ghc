@@ -1,6 +1,6 @@
 {-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ExplicitNamespaces #-}
 
 -----------------------------------------------------------------------------
 -- |
