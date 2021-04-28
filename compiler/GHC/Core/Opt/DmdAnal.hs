@@ -35,7 +35,8 @@ import GHC.Core.Utils
 import GHC.Core.TyCon
 import GHC.Core.Type
 import GHC.Core.FVs      ( rulesRhsFreeIds, bndrRuleAndUnfoldingIds )
-import GHC.Core.Coercion ( Coercion, coVarsOfCo )
+import GHC.Core.Coercion ( Coercion )
+import GHC.Core.TyCo.FVs ( coVarsOfCos )
 import GHC.Core.FamInstEnv
 import GHC.Core.Opt.Arity ( typeArity )
 import GHC.Utils.Misc
@@ -45,7 +46,8 @@ import GHC.Builtin.PrimOps
 import GHC.Builtin.Types.Prim ( realWorldStatePrimTy )
 import GHC.Types.Unique.Set
 
--- import GHC.Driver.Ppr
+import GHC.Driver.Ppr
+_ = pprTrace
 
 {-
 ************************************************************************
@@ -342,11 +344,12 @@ dmdAnalStar :: AnalEnv
             -> Demand   -- This one takes a *Demand*
             -> CoreExpr -- Should obey the let/app invariant
             -> (PlusDmdArg, CoreExpr)
-dmdAnalStar env (n :* cd) e
-  | WithDmdType dmd_ty e'    <- dmdAnal env cd e
+dmdAnalStar env (D n boxity sd) e
+  | WithDmdType dmd_ty e' <- dmdAnalScrut env boxity sd e
   = ASSERT2( not (isUnliftedType (exprType e)) || exprOkForSpeculation e, ppr e )
     -- The argument 'e' should satisfy the let/app invariant
     -- See Note [Analysing with absent demand] in GHC.Types.Demand
+    -- pprTrace "dmdAnalStar" (ppr dmd_ty $$ ppr (toPlusDmdArg $ multDmdType n dmd_ty, e')) $
     (toPlusDmdArg $ multDmdType n dmd_ty, e')
 
 -- Main Demand Analsysis machinery
@@ -363,7 +366,7 @@ dmdAnal' _ _ (Coercion co)
   = WithDmdType (unitDmdType (coercionDmdEnv co)) (Coercion co)
 
 dmdAnal' env dmd (Var var)
-  = WithDmdType (dmdTransform env var dmd) (Var var)
+  = WithDmdType (dmdTransform env var Boxed dmd) (Var var)
 
 dmdAnal' env dmd (Cast e co)
   = WithDmdType (dmd_ty `plusDmdType` mkPlusDmdArg (coercionDmdEnv co)) (Cast e' co)
@@ -426,20 +429,21 @@ dmdAnal' env dmd (Case scrut case_bndr ty [Alt alt bndrs rhs])
   = let
         WithDmdType rhs_ty rhs'           = dmdAnal env dmd rhs
         WithDmdType alt_ty1 dmds          = findBndrsDmds env rhs_ty bndrs
-        WithDmdType alt_ty2 case_bndr_dmd = findBndrDmd env False alt_ty1 case_bndr
+        WithDmdType alt_ty2 case_bndr_dmd = findBndrDmd env notArgOfDfun alt_ty1 case_bndr
         -- Evaluation cardinality on the case binder is irrelevant and a no-op.
-        -- What matters is its nested sub-demand!
-        (_ :* case_bndr_sd)      = case_bndr_dmd
+        -- What matters is its nested sub-demand and its boxity!
+        -- NB: If case_bndr_dmd is absDmd, boxity will say Unboxed, which is
+        -- what we want, because then `seq` will put a `seqDmd` on its scrut.
+        D _ boxity case_bndr_sd           = case_bndr_dmd
+        !case_bndr'                       = setIdDemandInfo case_bndr case_bndr_dmd
         -- Compute demand on the scrutinee
         -- FORCE the result, otherwise thunks will end up retaining the
         -- whole DmdEnv
         !(!bndrs', !scrut_sd)
           | DataAlt _ <- alt
           , id_dmds <- addCaseBndrDmd case_bndr_sd dmds
-          -- See Note [Demand on scrutinee of a product case]
-          = let !new_info = setBndrsDemandInfo bndrs id_dmds
-                !new_prod = mkProd id_dmds
-            in (new_info, new_prod)
+          -- See Note [Demand on the scrutinee of a product case]
+          = (setBndrsDemandInfo bndrs id_dmds, mkProd id_dmds)
           | otherwise
           -- __DEFAULT and literal alts. Simply add demands and discard the
           -- evaluation cardinality, as we evaluate the scrutinee exactly once.
@@ -452,9 +456,8 @@ dmdAnal' env dmd (Case scrut case_bndr ty [Alt alt bndrs rhs])
           | otherwise
           = alt_ty2
 
-        WithDmdType scrut_ty scrut' = dmdAnal env scrut_sd scrut
+        WithDmdType scrut_ty scrut' = dmdAnalScrut env boxity scrut_sd scrut
         res_ty             = alt_ty3 `plusDmdType` toPlusDmdArg scrut_ty
-        !case_bndr'        = setIdDemandInfo case_bndr case_bndr_dmd
     in
 --    pprTrace "dmdAnal:Case1" (vcat [ text "scrut" <+> ppr scrut
 --                                   , text "dmd" <+> ppr dmd
@@ -482,8 +485,10 @@ dmdAnal' env dmd (Case scrut case_bndr ty alts)
             WithDmdType rest_ty as' = combineAltDmds as
           in WithDmdType (lubDmdType cur_ty rest_ty) (a':as')
 
-        WithDmdType scrut_ty scrut'   = dmdAnal env topSubDmd scrut
-        WithDmdType alt_ty1 case_bndr' = annotateBndr env alt_ty case_bndr
+        WithDmdType alt_ty1 case_bndr_dmd = findBndrDmd env notArgOfDfun alt_ty case_bndr
+        D _ boxity _                      = case_bndr_dmd
+        !case_bndr'                       = setIdDemandInfo case_bndr case_bndr_dmd
+        WithDmdType scrut_ty scrut'       = dmdAnalScrut env boxity topSubDmd scrut
                                -- NB: Base case is botDmdType, for empty case alternatives
                                --     This is a unit for lubDmdType, and the right result
                                --     when there really are no alternatives
@@ -544,13 +549,31 @@ forcesRealWorld fam_envs ty
   | otherwise
   = False
 
+-- | Tries to analyse a variable scrutinee with the boxity a surrounding `Case`
+-- or function call puts on it. Therefore it has to replicate a bit of the
+-- boring cases of `dmdAnal`. The `Cast` case is a particular annoyance...
+dmdAnalScrut :: AnalEnv -> Boxity -> SubDemand -> CoreExpr -> WithDmdType CoreExpr
+dmdAnalScrut env boxity sd e = go [] e
+  where
+    go cos (Var v)
+      = -- pprTrace "dmdAnalScrut" (ppr e $$ ppr var_ty $$ ppr (mkPlusDmdArg (coercionsDmdEnv cos)) $$ ppr ty) $
+        WithDmdType ty e -- NB: ultimately we return the original expr
+      where
+        var_ty = dmdTransform env v boxity sd
+        ty = var_ty `plusDmdType` mkPlusDmdArg (coercionsDmdEnv cos)
+    go cos (Tick _ e) = go cos e
+    go cos (Cast e co) = go (co:cos) e
+    go cos (App fn a) | isTypeArg a = go cos fn
+    go cos (Lam b e)  | isTyVar b   = go cos e
+    go _ _  = dmdAnal env sd e -- give up; it wasn't a Var anyway
+
 dmdAnalSumAlt :: AnalEnv -> SubDemand -> Id -> Alt Var -> WithDmdType (Alt Var)
 dmdAnalSumAlt env dmd case_bndr (Alt con bndrs rhs)
   | WithDmdType rhs_ty rhs' <- dmdAnal env dmd rhs
   , WithDmdType alt_ty dmds <- findBndrsDmds env rhs_ty bndrs
-  , let (_ :* case_bndr_sd) = findIdDemand alt_ty case_bndr
-        -- See Note [Demand on scrutinee of a product case]
-        id_dmds             = addCaseBndrDmd case_bndr_sd dmds
+  , let (D _ _ case_bndr_sd) = findIdDemand alt_ty case_bndr
+        -- See Note [Demand on the scrutinee of a product case]
+        id_dmds              = addCaseBndrDmd case_bndr_sd dmds
         -- Do not put a thunk into the Alt
         !new_ids  = setBndrsDemandInfo bndrs id_dmds
   = WithDmdType alt_ty (Alt con new_ids rhs')
@@ -716,43 +739,44 @@ strict in |y|.
 ************************************************************************
 -}
 
-dmdTransform :: AnalEnv         -- ^ The strictness environment
-             -> Id              -- ^ The function
-             -> SubDemand       -- ^ The demand on the function
-             -> DmdType         -- ^ The demand type of the function in this context
-                                -- Returned DmdEnv includes the demand on
-                                -- this function plus demand on its free variables
-
+dmdTransform :: AnalEnv   -- ^ The analysis environment
+             -> Id        -- ^ The variable
+             -> Boxity    -- ^ Whether the var was used in an unboxing context
+             -> SubDemand -- ^ The evaluation context of the var
+             -> DmdType   -- ^ The demand type unleashed by the variable in this
+                          -- context. The returned DmdEnv includes the demand on
+                          -- this function plus demand on its free variables
 -- See Note [What are demand signatures?] in "GHC.Types.Demand"
-dmdTransform env var dmd
+dmdTransform env var boxity sd
   -- Data constructors
   | isDataConWorkId var
-  = dmdTransformDataConSig (idArity var) dmd
+  = dmdTransformDataConSig (idArity var) sd
   -- Dictionary component selectors
   -- Used to be controlled by a flag.
   -- See #18429 for some perf measurements.
   | Just _ <- isClassOpId_maybe var
-  = -- pprTrace "dmdTransform:DictSel" (ppr var $$ ppr dmd) $
-    dmdTransformDictSelSig (idDmdSig var) dmd
+  = -- pprTrace "dmdTransform:DictSel" (ppr var $$ ppr (idDmdSig var) $$ ppr sd) $
+    dmdTransformDictSelSig (idDmdSig var) sd
   -- Imported functions
   | isGlobalId var
-  , let res = dmdTransformSig (idDmdSig var) dmd
-  = -- pprTrace "dmdTransform:import" (vcat [ppr var, ppr (idDmdSig var), ppr dmd, ppr res])
+  , let res = dmdTransformSig (idDmdSig var) sd
+  = -- pprTrace "dmdTransform:import" (vcat [ppr var, ppr (idDmdSig var), ppr sd, ppr res])
     res
   -- Top-level or local let-bound thing for which we use LetDown ('useLetUp').
   -- In that case, we have a strictness signature to unleash in our AnalEnv.
+  -- Boxity is discarded, as the thing is a known function and its boxity is not interesting.
   | Just (sig, top_lvl) <- lookupSigEnv env var
-  , let fn_ty = dmdTransformSig sig dmd
-  = -- pprTrace "dmdTransform:LetDown" (vcat [ppr var, ppr sig, ppr dmd, ppr fn_ty]) $
+  , let fn_ty = dmdTransformSig sig sd
+  = -- pprTrace "dmdTransform:LetDown" (vcat [ppr var, ppr sig, ppr sd, ppr fn_ty]) $
     case top_lvl of
-      NotTopLevel -> addVarDmd fn_ty var (C_11 :* dmd)
+      NotTopLevel -> addVarDmd fn_ty var (D C_11 Boxed sd)
       TopLevel
         | isInterestingTopLevelFn var
         -- Top-level things will be used multiple times or not at
         -- all anyway, hence the multDmd below: It means we don't
         -- have to track whether @var@ is used strictly or at most
         -- once, because ultimately it never will.
-        -> addVarDmd fn_ty var (C_0N `multDmd` (C_11 :* dmd)) -- discard strictness
+        -> addVarDmd fn_ty var (C_0N `multDmd` (D C_11 Boxed sd)) -- discard strictness
         | otherwise
         -> fn_ty -- don't bother tracking; just annotate with 'topDmd' later
   -- Everything else:
@@ -760,8 +784,8 @@ dmdTransform env var dmd
   --   * Lambda binders
   --   * Case and constructor field binders
   | otherwise
-  = -- pprTrace "dmdTransform:other" (vcat [ppr var, ppr sig, ppr dmd, ppr res]) $
-    unitDmdType (unitVarEnv var (C_11 :* dmd))
+  = -- pprTrace "dmdTransform:other" (vcat [ppr var, ppr boxity, ppr sd]) $
+    unitDmdType (unitVarEnv var (D C_11 boxity sd))
 
 {- *********************************************************************
 *                                                                      *
@@ -1222,8 +1246,11 @@ unitDmdType :: DmdEnv -> DmdType
 unitDmdType dmd_env = DmdType dmd_env [] topDiv
 
 coercionDmdEnv :: Coercion -> DmdEnv
-coercionDmdEnv co = mapVarEnv (const topDmd) (getUniqSet $ coVarsOfCo co)
-                    -- The VarSet from coVarsOfCo is really a VarEnv Var
+coercionDmdEnv co = coercionsDmdEnv [co]
+
+coercionsDmdEnv :: [Coercion] -> DmdEnv
+coercionsDmdEnv cos = mapVarEnv (const topDmd) (getUniqSet $ coVarsOfCos cos)
+                      -- The VarSet from coVarsOfCos is really a VarEnv Var
 
 addVarDmd :: DmdType -> Var -> Demand -> DmdType
 addVarDmd (DmdType fv ds res) var dmd
@@ -1273,18 +1300,6 @@ setBndrsDemandInfo (b:bs) (d:ds)
     in new_info : vars
 setBndrsDemandInfo [] ds = ASSERT( null ds ) []
 setBndrsDemandInfo bs _  = pprPanic "setBndrsDemandInfo" (ppr bs)
-
-annotateBndr :: AnalEnv -> DmdType -> Var -> WithDmdType Var
--- The returned env has the var deleted
--- The returned var is annotated with demand info
--- according to the result demand of the provided demand type
--- No effect on the argument demands
-annotateBndr env dmd_ty var
-  | isId var  = WithDmdType dmd_ty' new_id
-  | otherwise = WithDmdType dmd_ty  var
-  where
-    new_id = setIdDemandInfo var dmd
-    WithDmdType dmd_ty' dmd = findBndrDmd env False dmd_ty var
 
 annotateLamIdBndr :: AnalEnv
                   -> DFunFlag   -- is this lambda at the top of the RHS of a dfun?
