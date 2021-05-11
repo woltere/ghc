@@ -13,6 +13,7 @@ import GHC.Parser.Errors.Types
 import GHC.Parser.Types
 import GHC.Types.Basic
 import GHC.Types.Error
+import GHC.Types.Hint.Ppr (perhapsAsPat)
 import GHC.Types.SrcLoc
 import GHC.Types.Name.Reader (opIsAt, starInfo, rdrNameOcc, mkUnqual)
 import GHC.Types.Name.Occurrence (isSymOcc, occNameFS, varName)
