@@ -1534,10 +1534,10 @@ emitPrimOp dflags primop = case primop of
     then Left $ MO_Cmpxchg2 W32
     else panic "CasAddrOp2_Word32"
 
-  CasAddrOp2_Word64 -> \args -> opCallishHandledLater args $
+  CasAddrOp2_Word -> \args -> opCallishHandledLater args $
     if ncg && x86ish
-    then Left $ MO_Cmpxchg2 W64
-    else panic "CasAddrOp2_Word64"
+    then Left $ MO_Cmpxchg2 (wordWidth platform)
+    else panic "CasAddrOp2_Word"
 
   -- tagToEnum# is special: we need to pull the constructor
   -- out of the table, and perform an appropriate return.
