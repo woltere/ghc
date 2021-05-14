@@ -2235,7 +2235,7 @@ tcUserStmt (L loc (BodyStmt _ expr _ _))
                                    emptyLocalBinds]
               -- [it = expr]
               the_bind  = L loc $ (mkTopFunBind FromSource
-                                     (L loc' fresh_it) matches)
+                                     (L loc' fresh_it) [] matches)
                                          { fun_ext = fvs }
               -- Care here!  In GHCi the expression might have
               -- free variables, and they in turn may have free type variables

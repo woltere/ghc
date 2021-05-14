@@ -613,6 +613,7 @@ tcPolyCheck prag_fn
                          , sig_ctxt  = ctxt
                          , sig_loc   = sig_loc })
             (L bind_loc (FunBind { fun_id = L nm_loc name
+                                 , fun_tv_binds = tvs
                                  , fun_matches = matches }))
   = do { traceTc "tcPolyCheck" (ppr poly_id $$ ppr sig_loc)
 
@@ -648,10 +649,11 @@ tcPolyCheck prag_fn
        ; mod <- getModule
        ; tick <- funBindTicks (locA nm_loc) poly_id mod prag_sigs
 
-       ; let bind' = FunBind { fun_id      = L nm_loc poly_id2
-                             , fun_matches = matches'
-                             , fun_ext     = wrap_gen <.> wrap_res
-                             , fun_tick    = tick }
+       ; let bind' = FunBind { fun_id       = L nm_loc poly_id2
+                             , fun_matches  = matches'
+                             , fun_tv_binds = tvs
+                             , fun_ext      = wrap_gen <.> wrap_res
+                             , fun_tick     = tick }
 
              export = ABE { abe_ext   = noExtField
                           , abe_wrap  = idHsWrapper
@@ -1204,6 +1206,7 @@ tcMonoBinds :: RecFlag  -- Whether the binding is recursive for typechecking pur
 -- SPECIAL CASE 1: see Note [Inference for non-recursive function bindings]
 tcMonoBinds is_rec sig_fn no_gen
            [ L b_loc (FunBind { fun_id = L nm_loc name
+                              , fun_tv_binds = tvs
                               , fun_matches = matches })]
                              -- Single function binding,
   | NonRecursive <- is_rec   -- ...binder isn't mentioned in RHS
@@ -1220,6 +1223,7 @@ tcMonoBinds is_rec sig_fn no_gen
         ; mono_id <- newLetBndr no_gen name Many rhs_ty
         ; return (unitBag $ L b_loc $
                      FunBind { fun_id = L nm_loc mono_id,
+                               fun_tv_binds = tvs,
                                fun_matches = matches',
                                fun_ext = co_fn, fun_tick = [] },
                   [MBI { mbi_poly_name = name
@@ -1459,6 +1463,7 @@ tcRhs (TcFunBind info@(MBI { mbi_sig = mb_sig, mbi_mono_id = mono_id })
         ; (co_fn, matches') <- tcMatchesFun (L (noAnnSrcSpan loc) (idName mono_id))
                                  matches (mkCheckExpType $ idType mono_id)
         ; return ( FunBind { fun_id = L (noAnnSrcSpan loc) mono_id
+                           , fun_tv_binds = []
                            , fun_matches = matches'
                            , fun_ext = co_fn
                            , fun_tick = [] } ) }

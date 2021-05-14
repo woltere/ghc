@@ -168,6 +168,9 @@ pp_err = \case
    PsErrEmptyLambda
       -> text "A lambda requires at least one parameter"
 
+   PsErrorIllegalTypeArguments
+      -> text "Type variable arguments after ordinary patterns are not allowed yet"
+
    PsErrNumUnderscores reason
       -> text $ case reason of
             NumUnderscore_Integral -> "Use NumericUnderscores to allow underscores in integer literals"

@@ -92,6 +92,9 @@ data PsErrorDesc
    | PsErrEmptyLambda
       -- ^ A lambda requires at least one parameter
 
+   | PsErrorIllegalTypeArguments
+      -- ^ Type variable arguments after ordinary patterns are not allowed yet
+
    | PsErrNumUnderscores !NumUnderscoreReason
       -- ^ Underscores in literals without the extension enabled
 
