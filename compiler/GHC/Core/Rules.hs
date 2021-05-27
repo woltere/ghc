@@ -863,7 +863,7 @@ match renv subst e1 (Let bind e2) mco
 ------------------------ Literals ---------------------
 match _ subst (Lit lit1) (Lit lit2) mco
   | lit1 == lit2
-  = ASSERT2( isReflMCo mco, ppr mco )
+  = assertPpr (isReflMCo mco) (ppr mco) $
     Just subst
 
 ------------------------  Lambdas ---------------------
@@ -1010,9 +1010,9 @@ match_co renv subst co1 co2
 
 match_co _ _ _co1 _co2
     -- Currently just deals with CoVarCo and Refl
-#if defined(DEBUG)
+  | debugIsOn
   = pprTrace "match_co: needs more cases" (ppr _co1 $$ ppr _co2) Nothing
-#else
+  | otherwise
   = Nothing
 
 -------------
