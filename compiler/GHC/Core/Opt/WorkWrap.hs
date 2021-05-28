@@ -897,9 +897,9 @@ splitThunk :: DynFlags -> FamInstEnvs -> RecFlag -> Var -> Expr Var -> UniqSM [(
 splitThunk dflags fam_envs is_rec x rhs
   = assert (not (isJoinId x)) $
     do { let x' = localiseId x -- See comment above
-       ; (useful,_, wrap_fn, work_fn)
-           <- mkWWstr (initWwOpts dflags fam_envs) NotArgOfInlineableFun [x']
-       ; let res = [ (x, Let (NonRec x' rhs) (wrap_fn (work_fn (Var x')))) ]
+       ; (useful,_, wrap_fn, fn_arg)
+           <- mkWWstr_one (initWwOpts dflags fam_envs) NotArgOfInlineableFun x'
+       ; let res = [ (x, Let (NonRec x' rhs) (wrap_fn fn_arg)) ]
        ; if useful then assertPpr (isNonRec is_rec) (ppr x) -- The thunk must be non-recursive
                    return res
                    else return [(x, rhs)] }
