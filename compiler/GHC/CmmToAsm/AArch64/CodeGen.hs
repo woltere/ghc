@@ -62,6 +62,7 @@ import GHC.Data.FastString
 import GHC.Utils.Misc
 import GHC.Utils.Panic
 
+-- Note [General layout of an NCG]
 -- @cmmTopCodeGen@ will be our main entry point to code gen.  Here we'll get
 -- @RawCmmDecl@; see GHC.Cmm
 --
@@ -120,7 +121,6 @@ cmmTopCodeGen _cmm@(CmmData sec dat) = do
   --         ++ showSDocUnsafe (ppr cmm)
   return [CmmData sec dat] -- no translation, we just use CmmStatic
 
--- So we need BasicBlockCodeGen
 basicBlockCodeGen
         :: Block CmmNode C C
         -> NatM ( [NatBasicBlock Instr]
@@ -318,11 +318,6 @@ getRegisterReg platform (CmmGlobal mid)
 -- jumpTableEntry config Nothing   = CmmStaticLit (CmmInt 0 (ncgWordWidth config))
 -- jumpTableEntry _ (Just blockid) = CmmStaticLit (CmmLabel blockLabel)
 --     where blockLabel = blockLbl blockid
-
--- -----------------------------------------------------------------------------
--- Utility
-isIntFormat :: Format -> Bool
-isIntFormat = not . isFloatFormat
 
 -- -----------------------------------------------------------------------------
 -- General things for putting together code sequences

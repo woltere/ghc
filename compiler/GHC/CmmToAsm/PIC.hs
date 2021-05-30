@@ -122,9 +122,10 @@ cmmMakeDynamicReference config referenceKind lbl
               addImport stub
               return $ CmmLit $ CmmLabel stub
 
-        -- GOT relative loads work differently on AArch64.  We don't
-        -- the got symbol is loaded directly, and not through an additional
-        -- load.
+        -- GOT relative loads work differently on AArch64.  We don't do two
+        -- step loads. The got symbol is loaded directly, and not through an
+        -- additional load. Thus we do not need the CmmLoad decoration we have
+        -- on other platforms.
         AccessViaSymbolPtr | ArchAArch64 <- platformArch platform -> do
               let symbolPtr = mkDynamicLinkerLabel SymbolPtr lbl
               addImport symbolPtr
