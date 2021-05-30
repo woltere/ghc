@@ -782,7 +782,7 @@ getRegister' config plat expr
     unsupportedP :: OutputableP env a => env -> a -> b
     unsupportedP platform op = pprPanic "Unsupported op:" (pdoc platform op)
 
-    isNbitEncodeable :: Integer -> Integer -> Bool
+    isNbitEncodeable :: Int -> Integer -> Bool
     isNbitEncodeable n i = let shift = n - 1 in (-1 `shiftL` shift) <= i && i < (1 `shiftL` shift)
     -- This needs to check if n can be encoded as a bitmask immediate:
     --
