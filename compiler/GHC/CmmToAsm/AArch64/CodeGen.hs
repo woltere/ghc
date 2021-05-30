@@ -322,16 +322,6 @@ getRegisterReg platform (CmmGlobal mid)
 -- -----------------------------------------------------------------------------
 -- General things for putting together code sequences
 
--- -- Expand CmmRegOff.  ToDo: should we do it this way around, or convert
--- -- CmmExprs into CmmRegOff?
--- mangleIndexTree :: Platform -> CmmExpr -> CmmExpr
--- mangleIndexTree platform (CmmRegOff reg off)
---   = CmmMachOp (MO_Add width) [CmmReg reg, CmmLit (CmmInt (fromIntegral off) width)]
---   where width = typeWidth (cmmRegType platform reg)
-
--- mangleIndexTree _ _
---         = panic "AArch64.CodeGen.mangleIndexTree: no match"
-
 -- | The dual to getAnyReg: compute an expression into a register, but
 --      we don't mind which one it is.
 getSomeReg :: CmmExpr -> NatM (Reg, Format, InstrBlock)
