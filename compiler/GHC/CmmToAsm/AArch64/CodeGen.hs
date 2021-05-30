@@ -274,8 +274,7 @@ stmtToInstrs bid stmt = do
 
       CmmSwitch arg ids -> genSwitch arg ids
 
-      CmmCall { cml_target = arg
-              , cml_args_regs = gregs } -> genJump arg
+      CmmCall { cml_target = arg } -> genJump arg
 
       CmmUnwind _regs -> return nilOL
 
