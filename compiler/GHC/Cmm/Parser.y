@@ -1096,8 +1096,6 @@ callishMachOps platform = listToUFM $
         ( "xchg16", (MO_Xchg W16,)),
         ( "xchg32", (MO_Xchg W32,)),
         ( "xchg64", (MO_Xchg W64,))
-
-        -- ToDo: how do we tell CMM Lint how to type check callish macops?
     ]
   where
     memcpyLikeTweakArgs :: (Int -> CallishMachOp) -> [CmmExpr] -> (CallishMachOp, [CmmExpr])

@@ -187,11 +187,15 @@ pprGloblDecl platform lbl
   | not (externallyVisibleCLabel lbl) = empty
   | otherwise = text "\t.globl " <> pdoc platform lbl
 
+-- Note [Always use objects for info tables]
 -- See discussion in X86.Ppr
 -- for why this is necessary.  Essentially we need to ensure that we never
 -- pass function symbols when we migth want to lookup the info table.  If we
 -- did, we could end up with procedure linking tables (PLT)s, and thus the
--- lookup wouldn't pooint to the function, but into the jump table.
+-- lookup wouldn't point to the function, but into the jump table.
+--
+-- Fun fact: The LLVMMangler exists to patch this issue su on the LLVM side as
+-- well.
 pprLabelType' :: Platform -> CLabel -> SDoc
 pprLabelType' platform lbl =
   if isCFunctionLabel lbl || functionOkInfoTable then
