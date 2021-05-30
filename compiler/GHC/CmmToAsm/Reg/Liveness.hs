@@ -561,7 +561,7 @@ stripLiveBlock
         -> LiveBasicBlock instr
         -> NatBasicBlock instr
 
-stripLiveBlock _config (BasicBlock i lis)
+stripLiveBlock config (BasicBlock i lis)
  =      BasicBlock i instrs'
 
  where  (instrs', _)
