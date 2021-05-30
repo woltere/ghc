@@ -134,35 +134,6 @@ pprBasicBlock config info_env (BasicBlock blockid instrs)
       where f (MOV o1 o2) | o1 == o2 = False
             f _ = True
 
-    -- XXX: put deadlock detection behind a flag. This will need to pass over
-    -- each emitted instruction and can thus cause a slowdown in the number of
-    -- instructions we generate.
-    --
-    -- detect the trivial cases where we would need -fno-omit-yields
-    -- those are deadlocks where we have only an unconditional branch
-    -- instruction back to the block head, with no escape inbetween.
-    -- See https://gitlab.haskell.org/ghc/ghc/-/issues/367
-    -- This only intends to catch the very trivial case, not the more
-    -- compilicated cases.
-    {-
-    detectTrivialDeadlock :: [Instr] -> [Instr]
-    detectTrivialDeadlock instrs = case (findIndex isSelfBranch instrs) of
-      Just n | all (not . aarch64_isJumpishInstr) (take n instrs) ->
-        pprPanic "AArch64 NCG"
-                $  text "Deadlock detected! Re compile with -fno-omit-yields."
-                $$ text ""
-                $$ pprLabel platform asmLbl
-                $$ vcat (map (pprInstr platform) (take (n + 1) instrs))
-                $$ text ""
-                $$ text "See https://gitlab.haskell.org/ghc/ghc/-/issues/367"
-      -- Nothing, or there are jumpishInstructions before the self branch,
-      -- probably not a deadlock.
-      _ -> instrs
-
-      where isSelfBranch (B (TBlock blockid')) = blockid' == blockid
-            isSelfBranch _ = False
-    -}
-
     asmLbl = blockLbl blockid
     platform = ncgPlatform config
     maybe_infotable c = case mapLookup blockid info_env of

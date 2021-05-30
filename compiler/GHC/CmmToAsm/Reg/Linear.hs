@@ -636,14 +636,7 @@ releaseRegs regs = do
   assig <- getAssigR
   free <- getFreeRegsR
 
---   config <- getConfig
---   let gpRegs  = frGetFreeRegs platform RcInteger free :: [RealReg]
---       fltRegs = frGetFreeRegs platform RcFloat   free :: [RealReg]
---       dblRegs = frGetFreeRegs platform RcDouble  free :: [RealReg]
---       allFreeRegs = gpRegs ++ fltRegs ++ dblRegs
-
   let loop assig !free [] = do setAssigR assig; setFreeRegsR free; return ()
---      loop assig !free (RegReal rr : rs) | rr `elem` allFreeRegs = loop assig free rs
       loop assig !free (RegReal rr : rs) = loop assig (frReleaseReg platform rr free) rs
       loop assig !free (r:rs) =
          case lookupUFM assig r of

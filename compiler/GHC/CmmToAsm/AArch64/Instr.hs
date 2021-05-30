@@ -16,9 +16,7 @@ import GHC.CmmToAsm.Instr (RegUsage(..))
 import GHC.CmmToAsm.Format
 import GHC.CmmToAsm.Types
 import GHC.CmmToAsm.Utils
--- import GHC.CmmToAsm.Reg.Target
 import GHC.CmmToAsm.Config
--- import GHC.Platform.Reg.Class
 import GHC.Platform.Reg
 
 import GHC.Platform.Regs
@@ -26,12 +24,9 @@ import GHC.Cmm.BlockId
 import GHC.Cmm.Dataflow.Collections
 import GHC.Cmm.Dataflow.Label
 import GHC.Cmm
--- import GHC.Cmm.Info
--- import GHC.Data.FastString
 import GHC.Cmm.CLabel
 import GHC.Utils.Outputable
 import GHC.Platform
--- import GHC.Types.Unique.FM (listToUFM, lookupUFM)
 import GHC.Types.Unique.Supply
 
 import GHC.Utils.Panic
@@ -39,7 +34,6 @@ import GHC.Utils.Panic
 import Control.Monad (replicateM)
 import Data.Maybe (fromMaybe)
 
--- import Debug.Trace
 import GHC.Stack
 
 import Data.Bits ((.&.), complement)
@@ -500,6 +494,8 @@ allocMoreStack platform slots proc@(CmmProc info lbl live (ListGraph code)) = do
 -- We have a few common "instructions" (nearly all the pseudo-ops) but
 -- mostly all of 'Instr' is machine-specific.
 
+-- Some additional (potential future) instructions are commented out. They are
+-- not needed yet for the backend but could be used in the future.
 data Instr
     -- comment pseudo-op
     = COMMENT SDoc

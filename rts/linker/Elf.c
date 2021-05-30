@@ -775,8 +775,8 @@ ocGetNames_ELF ( ObjectCode* oc )
           void * mem = mmapAnonForLinker(size+stub_space);
 
           if( mem == MAP_FAILED ) {
-            sysErrorBelch("failed to mmap allocated memory to load section %d. "
-                            "errno = %d", i, errno);
+            barf("failed to mmap allocated memory to load section %d. "
+                 "errno = %d", i, errno);
           }
 
           /* copy only the image part over; we don't want to copy data
