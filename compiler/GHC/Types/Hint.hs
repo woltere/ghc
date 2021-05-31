@@ -13,6 +13,8 @@ import GHC.Hs.Extension (GhcTc)
 import GHC.Types.Var (Var)
 import GHC.Types.Basic (Activation, RuleName)
 import {-# SOURCE #-} Language.Haskell.Syntax.Expr
+  -- This {-# SOURCE #-} import should be removable once
+  -- 'Language.Haskell.Syntax.Bind' no longer depends on 'GHC.Tc.Types.Evidence'.
 
 -- | A type for hints emitted by GHC.
 -- A /hint/ suggests a possible way to deal with a particular warning or error.

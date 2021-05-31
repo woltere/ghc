@@ -53,6 +53,7 @@ import GHC.Builtin.Names
 
 import GHC.Hs
 
+import GHC.Tc.Errors.Types ( LevityCheckProvenance(..) )
 import {-# SOURCE #-} GHC.Tc.Gen.Splice (runTopSplice)
 import GHC.Tc.Utils.Monad
 import GHC.Tc.TyCl.Build ( TcMethInfo, MethInfo )
@@ -67,7 +68,6 @@ import GHC.Core.Type
 import GHC.Core.Coercion
 import GHC.Core.ConLike
 import GHC.Core.DataCon
-import GHC.HsToCore.Errors.Types
 
 import GHC.Utils.Outputable
 import GHC.Utils.Misc

@@ -32,8 +32,8 @@ import GHC.Driver.Env
 import GHC.Driver.Session
 
 import GHC.Hs
-import GHC.HsToCore.Errors.Types
 
+import GHC.Tc.Errors.Types ( LevityCheckProvenance(..) )
 import GHC.Tc.TyCl.Build
 import GHC.Tc.Solver( pushLevelAndSolveEqualities, pushLevelAndSolveEqualitiesX
                     , reportUnsolvedEqualities )

@@ -12,7 +12,7 @@ import GHC.Driver.Flags
 import GHC.Hs
 import GHC.HsToCore.Errors.Types
 import GHC.Prelude
-import GHC.Tc.Errors.Ppr (formatLevPolyErr)
+import GHC.Tc.Errors.Ppr (formatLevPolyErr, pprLevityPolyInType)
 import GHC.Types.Basic (pprRuleName)
 import GHC.Types.Error
 import GHC.Types.Id (idType)
@@ -236,34 +236,7 @@ instance Diagnostic DsMessage where
          in mkSimpleDecorated $
                formatLevPolyErr (exprType e) $$ (text "In the type of expression:" <+> extra)
     DsLevityPolyInType ty prov
-      -> let extra = case prov of
-               LevityCheckInBinder v
-                 -> text "In the type of binder" <+> quotes (ppr v)
-               LevityCheckInVarType
-                 -> text "When trying to create a variable of type:" <+> ppr ty
-               LevityCheckInWildcardPattern
-                 -> text "In a wildcard pattern"
-               LevityCheckInUnboxedTuplePattern p
-                 -> text "In the type of an element of an unboxed tuple pattern:" $$ ppr p
-               LevityCheckGenSig
-                 -> empty
-               LevityCheckCmdStmt
-                 -> empty
-               LevityCheckMkCmdEnv id_var
-                 -> text "In the result of the function" <+> quotes (ppr id_var)
-               LevityCheckDoCmd do_block
-                 -> text "In the do-command:" <+> ppr do_block
-               LevityCheckDesugaringCmd cmd
-                 -> text "When desugaring the command:" <+> ppr cmd
-               LevityCheckInCmd body
-                 -> text "In the command:" <+> ppr body
-               LevityCheckInFunUse using
-                 -> text "In the result of a" <+> quotes (text "using") <+> text "function:" <+> ppr using
-               LevityCheckInValidDataCon
-                 -> empty
-               LevityCheckInValidClass
-                 -> empty
-        in mkSimpleDecorated $ formatLevPolyErr ty $$ extra
+      -> mkSimpleDecorated $ pprLevityPolyInType ty prov
 
   diagnosticReason = \case
     DsUnknownMessage m          -> diagnosticReason m
@@ -338,6 +311,18 @@ instance Diagnostic DsMessage where
     DsAnotherRuleMightFireFirst _ bad_rule _    -> [SuggestAddPhaseToCompetingRule bad_rule]
     DsLevityPolyInExpr{}                        -> noHints
     DsLevityPolyInType{}                        -> noHints
+
+{-
+Note [Suggest NegativeLiterals]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If you write
+  x :: Int8
+  x = -128
+it'll parse as (negate 128), and overflow.  In this case, suggest NegativeLiterals.
+We get an erroneous suggestion for
+  x = 128
+but perhaps that does not matter too much.
+-}
 
 --
 -- Helper functions

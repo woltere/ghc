@@ -352,18 +352,6 @@ warnAboutOverflowedLiterals dflags lit
       where
         bounds = Just (MinBound minB, MaxBound maxB)
 
-{-
-Note [Suggest NegativeLiterals]
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-If you write
-  x :: Int8
-  x = -128
-it'll parse as (negate 128), and overflow.  In this case, suggest NegativeLiterals.
-We get an erroneous suggestion for
-  x = 128
-but perhaps that does not matter too much.
--}
-
 warnAboutEmptyEnumerations :: FamInstEnvs -> DynFlags -> LHsExpr GhcTc
                            -> Maybe (LHsExpr GhcTc)
                            -> LHsExpr GhcTc -> DsM ()

@@ -11,14 +11,15 @@ import GHC.Core.DataCon
 import GHC.Core.Type
 import GHC.Driver.Session
 import GHC.Hs
+import GHC.HsToCore.Pmc.Solver.Types
+import GHC.Tc.Errors.Types (LevityCheckProvenance)
+import GHC.Types.Basic (Activation)
 import GHC.Types.Error
+import GHC.Types.ForeignCall
 import GHC.Types.Id
 import GHC.Types.Name (Name)
-import qualified GHC.LanguageExtensions as LangExt
-import GHC.HsToCore.Pmc.Solver.Types
-import GHC.Types.Basic (Activation)
-import GHC.Types.ForeignCall
 import GHC.Utils.Outputable
+import qualified GHC.LanguageExtensions as LangExt
 
 newtype MinBound = MinBound Integer
 newtype MaxBound = MaxBound Integer
@@ -30,8 +31,49 @@ data DsMessage
   -- | Simply wraps a generic 'Diagnostic' message.
   = forall a. (Diagnostic a, Typeable a) => DsUnknownMessage a
 
+    {-| DsEmptyEnumeration is a warning (controlled by the -Wempty-enumerations flag) that is
+        emitted if an enumeration is empty.
+
+        Example(s):
+
+          main :: IO ()
+          main = do
+            let enum = [5 .. 3]
+            print enum
+
+          Here 'enum' would yield an empty list, because 5 is greater than 3.
+
+        Test case(s):
+          warnings/should_compile/T10930
+          warnings/should_compile/T18402
+          warnings/should_compile/T10930b
+          numeric/should_compile/T10929
+          numeric/should_compile/T7881
+          deSugar/should_run/T18172
+
+    -}
   | DsEmptyEnumeration
 
+    {-| DsIdentitiesFound is a warning (controlled by the -Widentities flag) that is
+        emitted on uses of Prelude numeric conversions that are probably the identity
+        (and hence could be omitted).
+
+        Example(s):
+
+          main :: IO ()
+          main = do
+            let x = 10
+            print $ conv 10
+
+            where
+              conv :: Int -> Int
+              conv x = fromIntegral x
+
+        Here calling 'conv' is essentially the identity function, and therefore can be omitted.
+
+        Test case(s):
+          deSugar/should_compile/T4488
+    -}
   | DsIdentitiesFound !Id   -- The conversion function
                       !Type -- The type of conversion
 
@@ -102,10 +144,11 @@ data DsMessage
 
   | DsRecBindsNotAllowedForUnliftedTys ![LHsBindLR GhcTc GhcTc]
 
-  -- FIXME(adn) Unfortunately the first argument is an opaque 'ty' with an
-  -- 'Outputable' constraint because this messages is emitted from 'GHC.HsToCore.Expr.checkLevPolyArgs'
-  -- which gets passed a completely polymorphic, 'Outputable' type.
-  | forall ty. Outputable ty => DsCannotUseFunWithPolyArgs !ty !Type ![Type]
+  -- NOTE(adn) The first argument is an opaque 'expr' with an
+  -- 'Outputable' constraint because this messages is emitted from
+  -- 'GHC.HsToCore.Expr.checkLevPolyArgs' which gets passed a polymorphic
+  -- 'Outputable' type.
+  | forall expr. Outputable expr => DsCannotUseFunWithPolyArgs !expr !Type ![Type]
 
   | DsRuleMightInlineFirst !RuleName !Var !Activation
 
@@ -119,22 +162,6 @@ data DsMessage
 
 -- The positional number of the argument for an expression (first, second, third, etc)
 newtype DsArgNum = DsArgNum Int
-
--- | Where the levity checking for the input type originated
-data LevityCheckProvenance
-  = LevityCheckInVarType
-  | LevityCheckInBinder !Var
-  | LevityCheckInWildcardPattern
-  | LevityCheckInUnboxedTuplePattern !(Pat GhcTc)
-  | LevityCheckGenSig
-  | LevityCheckCmdStmt
-  | LevityCheckMkCmdEnv !Var
-  | LevityCheckDoCmd !(HsCmd GhcTc)
-  | LevityCheckDesugaringCmd !(LHsCmd GhcTc)
-  | LevityCheckInCmd !(LHsCmd GhcTc)
-  | LevityCheckInFunUse !(LHsExpr GhcTc)
-  | LevityCheckInValidDataCon
-  | LevityCheckInValidClass
 
 -- | Where the levity checking for the expression originated
 data LevityExprProvenance

@@ -112,7 +112,6 @@ import GHC.Types.Var
 import GHC.Core.Predicate
 import GHC.Tc.Errors.Types
 import GHC.Tc.Types.Origin
-import GHC.HsToCore.Errors.Types
 
 -- others:
 import GHC.Tc.Utils.Monad        -- TcType, amongst others
@@ -2635,14 +2634,16 @@ ensureNotLevPoly ty provenance
 
   -- See Note [Levity polymorphism checking] in GHC.HsToCore.Monad
 checkForLevPoly :: LevityCheckProvenance -> Type -> TcM ()
-checkForLevPoly = checkForLevPolyX (\dsM -> addDetailedDiagnostic (TcLevityCheckDsMessage dsM))
+checkForLevPoly = checkForLevPolyX (\ty -> addDetailedDiagnostic . TcLevityPolyInType ty)
 
 checkForLevPolyX :: Monad m
-                 => (DsMessage -> m ())  -- how to report an error
-                 -> LevityCheckProvenance -> Type -> m ()
+                 => (Type -> LevityCheckProvenance -> m ())  -- how to report an error
+                 -> LevityCheckProvenance
+                 -> Type
+                 -> m ()
 checkForLevPolyX add_err provenance ty
   | isTypeLevPoly ty
-  = add_err (DsLevityPolyInType ty provenance)
+  = add_err ty provenance
   | otherwise
   = return ()
 

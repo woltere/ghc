@@ -2,7 +2,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-} -- instance Diagnostic TcRnMessage
 
 module GHC.Tc.Errors.Ppr (
-  formatLevPolyErr
+    formatLevPolyErr
+  , pprLevityPolyInType
   ) where
 
 import GHC.Prelude
@@ -20,8 +21,8 @@ instance Diagnostic TcRnMessage where
   diagnosticMessage = \case
     TcRnUnknownMessage m
       -> diagnosticMessage m
-    TcLevityCheckDsMessage m (ErrInfo extra)
-      -> mkDecorated (unDecorated (diagnosticMessage m) `mappend` [extra])
+    TcLevityPolyInType ty prov (ErrInfo extra)
+      -> mkDecorated [pprLevityPolyInType ty prov, extra]
     TcRnImplicitLift id_or_name errInfo
       -> mkDecorated [text "The variable" <+> quotes (ppr id_or_name) <+>
                       text "is implicitly lifted in the TH quotation"
@@ -41,8 +42,8 @@ instance Diagnostic TcRnMessage where
   diagnosticReason = \case
     TcRnUnknownMessage m
       -> diagnosticReason m
-    TcLevityCheckDsMessage m _
-      -> diagnosticReason m
+    TcLevityPolyInType{}
+      -> ErrorWithoutFlag
     TcRnImplicitLift{}
       -> WarningWithFlag Opt_WarnImplicitLift
     TcRnUnusedPatternBinds{}
@@ -57,8 +58,8 @@ instance Diagnostic TcRnMessage where
   diagnosticHints = \case
     TcRnUnknownMessage m
       -> diagnosticHints m
-    TcLevityCheckDsMessage m _
-      -> diagnosticHints m
+    TcLevityPolyInType{}
+      -> noHints
     TcRnImplicitLift{}
       -> noHints
     TcRnUnusedPatternBinds{}
@@ -93,3 +94,34 @@ formatLevPolyErr ty
   where
     (tidy_env, tidy_ty) = tidyOpenType emptyTidyEnv ty
     tidy_ki             = tidyType tidy_env (tcTypeKind ty)
+
+pprLevityPolyInType :: Type -> LevityCheckProvenance -> SDoc
+pprLevityPolyInType ty prov =
+  let extra = case prov of
+        LevityCheckInBinder v
+          -> text "In the type of binder" <+> quotes (ppr v)
+        LevityCheckInVarType
+          -> text "When trying to create a variable of type:" <+> ppr ty
+        LevityCheckInWildcardPattern
+          -> text "In a wildcard pattern"
+        LevityCheckInUnboxedTuplePattern p
+          -> text "In the type of an element of an unboxed tuple pattern:" $$ ppr p
+        LevityCheckPatSynSig
+          -> empty
+        LevityCheckCmdStmt
+          -> empty -- I (Richard E, Dec '16) have no idea what to say here
+        LevityCheckMkCmdEnv id_var
+          -> text "In the result of the function" <+> quotes (ppr id_var)
+        LevityCheckDoCmd do_block
+          -> text "In the do-command:" <+> ppr do_block
+        LevityCheckDesugaringCmd cmd
+          -> text "When desugaring the command:" <+> ppr cmd
+        LevityCheckInCmd body
+          -> text "In the command:" <+> ppr body
+        LevityCheckInFunUse using
+          -> text "In the result of a" <+> quotes (text "using") <+> text "function:" <+> ppr using
+        LevityCheckInValidDataCon
+          -> empty
+        LevityCheckInValidClass
+          -> empty
+  in formatLevPolyErr ty $$ extra

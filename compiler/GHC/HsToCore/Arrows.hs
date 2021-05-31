@@ -33,13 +33,14 @@ import {-# SOURCE #-} GHC.HsToCore.Expr ( dsExpr, dsLExpr, dsLExprNoLP, dsLocalB
 import GHC.Tc.Utils.TcType
 import GHC.Core.Type( splitPiTy )
 import GHC.Core.Multiplicity
+import GHC.Tc.Errors.Types ( LevityCheckProvenance(..) )
 import GHC.Tc.Types.Evidence
 import GHC.Core
 import GHC.Core.FVs
 import GHC.Core.Utils
 import GHC.Core.Make
 import GHC.HsToCore.Binds (dsHsWrapper)
-import GHC.HsToCore.Errors.Types
+
 
 import GHC.Types.Id
 import GHC.Core.ConLike
@@ -858,7 +859,7 @@ dsCmdStmt ids local_vars out_ids (BodyStmt c_ty cmd _ _) env_ids = do
         out_ty = mkBigCoreVarTupTy out_ids
         before_c_ty = mkCorePairTy in_ty1 out_ty
         after_c_ty = mkCorePairTy c_ty out_ty
-    dsNoLevPoly c_ty LevityCheckCmdStmt -- I (Richard E, Dec '16) have no idea what to say here
+    dsNoLevPoly c_ty LevityCheckCmdStmt
     snd_fn <- mkSndExpr c_ty out_ty
     return (do_premap ids in_ty before_c_ty out_ty core_mux $
                 do_compose ids before_c_ty after_c_ty out_ty

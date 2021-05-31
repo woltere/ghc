@@ -79,6 +79,7 @@ import GHC.Core.Multiplicity
 
 import GHC.IfaceToCore
 
+import GHC.Tc.Errors.Types ( LevityCheckProvenance(..) )
 import GHC.Tc.Utils.Monad
 import GHC.Tc.Utils.TcMType ( checkForLevPolyX )
 
@@ -589,7 +590,8 @@ discardWarningsDs thing_inside
 -- | Fail with an error message if the type is levity polymorphic.
 dsNoLevPoly :: Type -> LevityCheckProvenance -> DsM ()
 -- See Note [Levity polymorphism checking]
-dsNoLevPoly ty provenance = checkForLevPolyX failWithDs provenance ty
+dsNoLevPoly ty provenance =
+  checkForLevPolyX (\ty -> failWithDs . DsLevityPolyInType ty) provenance ty
 
 -- | Check an expression for levity polymorphism, failing if it is
 -- levity polymorphic.
